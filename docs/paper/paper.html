@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ProcureMind: Agentic LLM-Based Invoice Authentication with Goods-Receipt Matching for First-Time Suppliers</title>
+<style>
+  @page { size: letter; margin: 0.75in 0.62in 0.95in 0.62in; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; color: #000;
+    font-family: "Times New Roman", Times, "Nimbus Roman", serif;
+    font-size: 10pt; line-height: 1.17;
+    font-kerning: normal; font-variant-ligatures: common-ligatures;
+  }
+  .title { font-size: 23pt; line-height: 1.12; text-align: center; margin: 0 0.3in 10pt; font-weight: normal; }
+  .authors { display: flex; flex-wrap: wrap; justify-content: center; column-gap: 0.3in; row-gap: 8pt; text-align: center; margin: 0 0.4in 16pt; }
+  .author { width: 1.9in; }
+  .author .role { display: block; font-size: 9pt; }
+  .author { font-size: 10pt; line-height: 1.2; }
+  .author .name { font-size: 11pt; }
+  .author i { display: block; }
+  .columns {
+    column-count: 2; column-gap: 0.24in; column-fill: balance;
+    text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+  }
+  p { margin: 0; text-indent: 1em; orphans: 2; widows: 2; }
+  .abstract, .keywords { font-size: 9pt; font-weight: bold; line-height: 1.15; text-indent: 1em; }
+  .abstract em, .keywords em { font-style: italic; }
+  .keywords { margin: 4pt 0 0; }
+  body { counter-reset: sec; }
+  h2 {
+    counter-increment: sec; counter-reset: sub;
+    font-size: 10pt; font-weight: normal; font-variant: small-caps; letter-spacing: 0.02em;
+    text-align: center; margin: 10pt 0 4pt; break-after: avoid;
+  }
+  h2::before { content: counter(sec, upper-roman) ". "; }
+  h2.unnumbered { counter-increment: none; }
+  h2.unnumbered::before { content: none; }
+  h3 {
+    counter-increment: sub;
+    font-size: 10pt; font-weight: normal; font-style: italic;
+    margin: 6pt 0 2pt; text-align: left; break-after: avoid;
+  }
+  h3::before { content: counter(sub, upper-alpha) ". "; }
+  .eq { display: flex; align-items: center; margin: 5pt 0; text-indent: 0; }
+  .eq .math { flex: 1; text-align: center; font-style: italic; }
+  .eq .math .n { font-style: normal; }
+  .eq .num { width: 2.2em; text-align: right; }
+  .math sub, .math sup { font-size: 70%; }
+  figure, .tbl { margin: 8pt 0; break-inside: avoid; }
+  figcaption { font-size: 8pt; line-height: 1.2; text-align: justify; margin-top: 4pt; }
+  .tbl .cap { font-size: 8pt; text-align: center; font-variant: small-caps; margin-bottom: 3pt; line-height: 1.25; }
+  .tbl .cap b { font-weight: normal; display: block; font-variant: normal; letter-spacing: 0.04em; }
+  table { width: 100%; border-collapse: collapse; font-size: 8pt; line-height: 1.2; }
+  th, td { padding: 1.6pt 3pt; vertical-align: top; text-align: left; }
+  th { font-weight: normal; font-variant: small-caps; border-bottom: 0.6pt solid #000; }
+  thead tr:first-child th { border-top: 1pt solid #000; }
+  tbody tr:last-child td { border-bottom: 1pt solid #000; }
+  td.r, th.r { text-align: right; }
+  td.c, th.c { text-align: center; }
+  td.nw, th.nw { white-space: nowrap; }
+  table.compact { font-size: 7.5pt; }
+  table.compact th, table.compact td { padding: 1.4pt 2.2pt; }
+  .mono { font-family: "Courier New", Courier, monospace; font-size: 7.4pt; }
+  ul.items { margin: 2pt 0 2pt 0; padding-left: 1.6em; }
+  ul.items li { margin: 0 0 1pt; }
+  ol.refs { font-size: 8pt; line-height: 1.2; padding-left: 0; margin: 0; list-style: none; counter-reset: ref; text-align: left; }
+  ol.refs li { counter-increment: ref; position: relative; padding-left: 2.4em; margin-bottom: 2pt; }
+  ol.refs li::before { content: "[" counter(ref) "]"; position: absolute; left: 0; width: 2em; text-align: right; }
+  svg text { font-family: "Times New Roman", Times, serif; }
+</style>
+</head>
+<body>
+
+<h1 class="title">ProcureMind: Agentic LLM-Based Invoice Authentication with Goods-Receipt Matching for First-Time Suppliers</h1>
+
+<div class="authors">
+  <div class="author">
+    <span class="name">Shrinidhi M</span>
+    <i>Presidency University</i>
+    Bangalore, India
+  </div>
+  <div class="author">
+    <span class="name">Nishanth D</span>
+    <i>Presidency University</i>
+    Bangalore, India
+  </div>
+  <div class="author">
+    <span class="name">Sinchana R T</span>
+    <i>Presidency University</i>
+    Bangalore, India
+  </div>
+  <div class="author">
+    <span class="name">Pavan K L</span>
+    <i>Presidency University</i>
+    Bangalore, India
+  </div>
+  <div class="author">
+    <span class="name">Ms. Priyanki Dutta</span>
+    <span class="role">(Project Guide)</span>
+    <i>Presidency University</i>
+    Bangalore, India
+  </div>
+</div>
+
+<div class="columns">
+
+<p class="abstract"><em>Abstract</em>—Invoice fraud such as changed bank details, look-alike vendors, duplicate billing and inflated
+totals continues to cost organisations heavily. Most accounts-payable controls rely on a vendor master file and a purchase order,
+so they cannot vouch for a supplier that has never been registered. This paper presents ProcureMind, an invoice-authentication
+system that combines three parts. A multimodal large language model (LLM) reads each invoice into structured fields. A
+deterministic engine of nine rule checks compares those fields with the organisation's own records. A tool-using LLM agent then
+investigates whatever the rules flag. For first-time suppliers we introduce a goods-receipt matching method: invoice lines are
+matched to warehouse goods received notes (GRNs) by product similarity, then quantities and unit costs are compared, so the
+physical delivery becomes the evidence of authenticity. The final decision takes the stricter of the rule-based risk score and
+the agent's score, so the LLM can raise risk but never clear a failed check. On a benchmark of ten invoices covering nine
+behaviours, run three times end to end with a production LLM, the system flagged every anomalous invoice in all 30 analyses (recall 1.00) and extracted every key field correctly, with a mean of 12.5 s per invoice. The agent escalated a bank-detail-change attack to rejection in every trial, but it also caused all three false positives, which came on genuine invoices; on this benchmark the rule engine alone was exact. A separate benchmark of the line matcher
+ranked the correct item first for all 36 paraphrased descriptions and accepted 91.7% of them at its operating threshold. It made no false matches on unrelated products but 3 on 8 deliberately similar ones. The system runs serverless on Cloudflare Workers with a PostgreSQL database.</p>
+
+<p class="keywords"><em>Index Terms</em>—invoice fraud detection, accounts payable, large language models, LLM agents,
+tool use, document understanding, three-way matching, goods received note, procurement.</p>
+
+<h2>Introduction</h2>
+
+<p>Paying a supplier is one of the last points at which an organisation can stop a fraudulent transaction cheaply. Billing
+schemes are among the most common forms of occupational fraud, and their median loss is among the highest [1].
+Business e-mail compromise is often carried out by sending a genuine-looking invoice with new bank details, and it caused
+reported losses of about US$2.9 billion in 2023 [2]. These attacks need no sophisticated forgery. A plausible vendor name, a
+believable amount and a note such as <i>&ldquo;our account is frozen, please pay the new account&rdquo;</i> are often enough to
+get past a busy accounts-payable (AP) clerk.</p>
+
+<p>The usual defence is a set of internal controls [3]. The supplier must appear in an approved vendor master. The invoice must
+quote an open purchase order (PO). Ideally, the goods must have been received before payment, which is the classic
+<i>three-way match</i> of PO, goods receipt and invoice. In practice these checks are often done by hand, inconsistently and
+under time pressure. Their weakest point is the <i>first-time supplier</i>: a vendor that is not yet in the registry has no tax
+ID or bank account on file to compare against. Such invoices are therefore either rejected outright, which blocks legitimate
+emergency purchases, or approved on trust, which is exactly the gap that impersonators exploit.</p>
+
+<p>Large language models (LLMs) with vision and tool use make it possible to automate the reading and the reasoning in this
+process. Used alone, however, an LLM is a poor control. Its judgments are not reproducible, it can hallucinate [4], and it can
+be persuaded by the persuasive text that fraudulent invoices contain. This paper describes <b>ProcureMind</b>, a system that
+uses LLMs where they are strong (reading documents and investigating open-ended anomalies) while keeping the payment decision
+anchored to deterministic checks against the organisation's own records. Our contributions are:</p>
+<ul class="items">
+  <li>a hybrid pipeline that combines LLM extraction, a nine-check rule engine and a tool-using review agent, with a
+  <i>stricter-signal-wins</i> fusion rule under which the agent can raise risk but never override a failed check;</li>
+  <li>a goods-receipt matching method that authenticates first-time suppliers against warehouse delivery records. It covers
+  supplier identity resolution, line-level product matching with quantity and price corroboration, and protection against
+  billing the same delivery twice;</li>
+  <li>an end-to-end evaluation on a ten-invoice benchmark covering nine behaviours, with ablations of the rule-only and agent-only
+  paths and a stand-alone benchmark of the product matcher;</li>
+  <li>a serverless deployment on Cloudflare Workers with PostgreSQL that streams each stage of the analysis live to the reviewer.</li>
+</ul>
+
+<h2>Literature Review</h2>
+
+<h3>Financial Fraud Detection</h3>
+<p>Statistical and machine-learning fraud detection has been surveyed extensively [5]&ndash;[7]. Most of this work targets
+high-volume transaction streams such as credit cards, telecommunications and insurance claims, where supervised classifiers can
+learn from millions of labelled examples. Procurement fraud is different: each organisation sees few invoices, fraud is rare,
+and labels are scarce. Forensic accountants have therefore relied on analytical tests such as Benford's law on invoice amounts
+and duplicate-payment detection [8], and on graph and network analysis of vendor relationships [9]. These methods operate on
+data that has already been keyed in and paid, rather than at the moment an invoice arrives. Their results are also statistical
+indicators, not explanations an AP clerk can act on.</p>
+
+<h3>Document Understanding</h3>
+<p>Extracting fields from invoices is a long-standing document-understanding problem. Chargrid [10] encoded page layout as a
+two-dimensional character grid. LayoutLM [11] and LayoutLMv3 [12] pre-trained transformers on text, layout and image together,
+and Donut [13] removed the separate OCR stage altogether. Public benchmarks such as FUNSD [14], SROIE [15] and CORD [16]
+measure key-information extraction from forms and receipts. These models need fine-tuning for each document schema. General
+multimodal LLMs [17], by contrast, can read an unseen invoice layout zero-shot and return output that conforms to a JSON schema.
+Extraction alone, however, says nothing about whether the invoice is genuine.</p>
+
+<h3>LLM Agents and Tool Use</h3>
+<p>Chain-of-thought prompting [18] showed that LLMs reason better when they spell out intermediate steps. ReAct [19]
+interleaves this reasoning with actions such as tool calls, and Toolformer [20] showed that models can learn when to call
+external APIs. These ideas make it practical for an agent to query a vendor registry or an invoice history while it
+investigates. LLMs nonetheless hallucinate [4], and their numerical judgments are poorly calibrated. In a financial control,
+these weaknesses argue for keeping deterministic checks in charge of the decision.</p>
+
+<h3>Research Gap</h3>
+<p>We found no prior system that (i) reads arbitrary invoices without template training, (ii) applies auditable rule checks
+against the organisation's own registry, POs and history, (iii) lets an agent investigate the residual risk with tools, and
+(iv) authenticates unregistered suppliers using physical goods-receipt evidence. ProcureMind addresses these four points
+together.</p>
+
+<h2>Proposed Methodology</h2>
+
+<p>Fig. 1 shows the pipeline. Each uploaded PDF or image passes through four stages, and every stage is streamed live to the
+reviewer as newline-delimited JSON events.</p>
+
+<figure>
+<svg viewBox="0 0 360 228" width="100%" xmlns="http://www.w3.org/2000/svg" font-size="8.5">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#000"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="#000" stroke-width="0.8">
+    <rect x="2" y="8" width="62" height="40" rx="2"/>
+    <rect x="76" y="8" width="62" height="40" rx="2"/>
+    <rect x="150" y="8" width="62" height="40" rx="2"/>
+    <rect x="224" y="8" width="62" height="40" rx="2"/>
+    <rect x="298" y="8" width="60" height="40" rx="2"/>
+    <rect x="136" y="88" width="166" height="58" rx="2" stroke-dasharray="3 2"/>
+    <rect x="4" y="182" width="108" height="40" rx="2"/>
+    <rect x="126" y="182" width="108" height="40" rx="2"/>
+    <rect x="248" y="182" width="108" height="40" rx="2"/>
+  </g>
+  <g stroke="#000" stroke-width="0.8" fill="none" marker-end="url(#a)">
+    <line x1="64" y1="28" x2="75" y2="28"/>
+    <line x1="138" y1="28" x2="149" y2="28"/>
+    <line x1="212" y1="28" x2="223" y2="28"/>
+    <line x1="286" y1="28" x2="297" y2="28"/>
+    <line x1="181" y1="88" x2="181" y2="49"/>
+    <line x1="255" y1="88" x2="255" y2="49"/>
+    <path d="M328,48 L328,164 L58,164 L58,181"/>
+    <path d="M328,164 L180,164 L180,181"/>
+    <path d="M328,164 L302,164 L302,181"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="33" y="25">Upload</text><text x="33" y="36" font-size="7.5">PDF / image</text>
+    <text x="107" y="21">1. Extraction</text><text x="107" y="32" font-size="7.5">multimodal LLM</text><text x="107" y="41" font-size="7.5">JSON schema</text>
+    <text x="181" y="21">2. Rule engine</text><text x="181" y="32" font-size="7.5">9 checks &#8594; <tspan font-style="italic">R</tspan></text><text x="181" y="41" font-size="7.5">deterministic</text>
+    <text x="255" y="21">3. Review agent</text><text x="255" y="32" font-size="7.5">5 tools &#8594; <tspan font-style="italic">A</tspan></text><text x="255" y="41" font-size="7.5">&#8804; 6 rounds</text>
+    <text x="328" y="21">4. Decision</text><text x="328" y="32" font-size="7.5">max(<tspan font-style="italic">R</tspan>, <tspan font-style="italic">A</tspan>)</text><text x="328" y="41" font-size="7.5">+ hard fails</text>
+    <text x="219" y="100">PostgreSQL records</text>
+    <text x="219" y="112" font-size="7.5">vendor registry &#183; purchase orders</text>
+    <text x="219" y="122" font-size="7.5">invoice history &#183; inventory &amp;</text>
+    <text x="219" y="132" font-size="7.5">goods received notes (GRN)</text>
+    <text x="219" y="142" font-size="7.5">reviewer audit trail</text>
+    <text x="58" y="198">Verified</text><text x="58" y="210" font-size="7.5">risk &lt; 30, no fails</text>
+    <text x="180" y="198">Needs review</text><text x="180" y="210" font-size="7.5">risk 30&#8211;69 or any fail</text>
+    <text x="302" y="198">Rejected</text><text x="302" y="210" font-size="7.5">risk &#8805; 70 or hard fail</text>
+  </g>
+  <text x="176" y="72" font-size="7.5" font-style="italic" text-anchor="end">read-only queries</text>
+</svg>
+<figcaption>Fig. 1. ProcureMind pipeline. The rule engine and the review agent both query the organisation's records. The
+rule score <i>R</i> and the agent score <i>A</i> are fused by taking the stricter of the two, and a human reviewer can override
+any outcome.</figcaption>
+</figure>
+
+<h3>Stage 1: Structured Extraction</h3>
+<p>The document is sent to a multimodal LLM through the OpenAI Responses API with <i>structured outputs</i>, which force the
+reply to conform to a JSON schema (a Zod schema in our code). The schema holds about twenty fields, including invoice number,
+vendor name, tax ID (GSTIN), bank account and IFSC routing code, PO reference, dates, line items, subtotal, tax and total. Three
+further fields support later stages: <i>is_invoice</i>, <i>document_type</i> and a list of <i>forensic observations</i>, which
+records visible tampering and pressure language. The instructions forbid inventing values: missing fields must be returned as
+null, and amounts must be plain numbers. A post-processing step trims strings and normalises dates to ISO&nbsp;8601. Any date
+that fails validation is discarded rather than guessed.</p>
+
+<h3>Stage 2: Deterministic Rule Engine</h3>
+<p>Nine checks compare the extracted fields with the database (Table&nbsp;I). Each check returns <i>pass</i>, <i>warn</i>,
+<i>fail</i> or <i>skip</i>, together with a human-readable explanation and a weight <i>w<sub>i</sub></i>. Passing and skipped
+checks carry zero weight. Identifiers (tax IDs, account numbers, invoice and PO numbers) are compared after removing
+everything except upper-case alphanumerics. Vendor names are lower-cased and stripped of punctuation and legal suffixes such as
+&ldquo;Pvt&rdquo;, &ldquo;Ltd&rdquo; and &ldquo;LLP&rdquo;, then compared with the Sørensen&ndash;Dice coefficient [21] over
+character bigrams:</p>
+<div class="eq"><span class="math">D(x, y) = 2|B(x) &#8745; B(y)| / (|B(x)| + |B(y)|)</span><span class="num">(1)</span></div>
+<p style="text-indent:0">where <i>B</i>(·) is the multiset of character bigrams. A vendor is matched first by tax ID, then by
+name. A Dice score of 1 counts as an exact match. A score of at least 0.86 that is not exact is flagged as a <i>similar
+name</i>, a possible impersonation. The rule risk score is</p>
+<div class="eq"><span class="math">R = min(100, &#8721;<sub>i</sub> w<sub>i</sub>)</span><span class="num">(2)</span></div>
+
+<div class="tbl">
+<div class="cap">Table I<b>Rule Checks and Their Failure Conditions</b></div>
+<table>
+<thead><tr><th>Check</th><th>Fails / warns when</th><th class="r"><i>w</i></th></tr></thead>
+<tbody>
+<tr><td class="nw">Document type</td><td>file is not an invoice</td><td class="r nw">80</td></tr>
+<tr><td class="nw">Approved vendor</td><td>blocked (80); unknown and not backed by goods (40); look-alike name (warn 20)</td><td class="r nw">20&ndash;80</td></tr>
+<tr><td class="nw">Tax registration</td><td>GSTIN differs from registry</td><td class="r nw">35</td></tr>
+<tr><td class="nw">Bank details</td><td>account (50) or routing code (35) differs</td><td class="r nw">35&ndash;50</td></tr>
+<tr><td class="nw">Duplicate</td><td>same file hash (70); same vendor + number (60); same vendor, amount and date (warn 25)</td><td class="r nw">25&ndash;70</td></tr>
+<tr><td class="nw">Arithmetic</td><td>qty × rate, line sum, subtotal + tax or total disagree beyond 0.5%; tax &gt; 30%</td><td class="r nw">30</td></tr>
+<tr><td class="nw">Goods received</td><td>billed goods not received, over quantity, tax-ID conflict, already billed</td><td class="r nw">15&ndash;55</td></tr>
+<tr><td class="nw">Purchase order</td><td>missing (warn), unknown, other vendor, closed, or over remaining balance</td><td class="r nw">15&ndash;40</td></tr>
+<tr><td class="nw">Dates</td><td>future-dated (25); &gt; 1 year old, due before issue, or predates PO (warn 10)</td><td class="r nw">10&ndash;25</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Checks with weight 60 or more are <i>hard failures</i>: a non-invoice, a blocked vendor or an exact duplicate. A PO is
+considered exceeded when the invoice total is more than 102% of the PO balance left after earlier verified invoices.</p>
+
+<h3>Goods-Receipt Matching for First-Time Suppliers</h3>
+<p>When the vendor is not in the registry, the tax-ID and bank checks have nothing to compare against. ProcureMind instead asks a
+physical question: <i>did we receive what this invoice bills?</i> The warehouse records every delivery as a goods received note
+(GRN), with the supplier name, the tax ID printed on the delivery challan, and the item, quantity and unit cost of each line.
+Matching an invoice to GRNs proceeds in four steps.</p>
+
+<p><i>1) Supplier identity:</i> A GRN belongs to the invoicing supplier if its tax ID equals the invoice's tax ID, or if the two
+names have a Dice score of at least 0.86 and at most one side has a tax ID. A name match with two <i>different</i> tax IDs is a
+<i>conflict</i>, the signature of someone impersonating a supplier who really did deliver (weight 45). Only GRNs dated from 180
+days before the invoice to 7 days after it are considered.</p>
+
+<p><i>2) Double-billing protection:</i> A GRN is <i>claimed</i> once a verified or pending-review invoice has matched it. Claimed
+GRNs are excluded from the pool, so the same delivery cannot be billed twice, even under a different invoice number (weight 55
+for a new supplier). Received quantities on the remaining open GRNs are pooled per inventory item, with a weighted-average unit
+cost.</p>
+
+<p><i>3) Line matching:</i> Invoice descriptions rarely repeat catalogue names verbatim. They add pack sizes, reorder words and
+abbreviate. For an invoice line <i>d</i> and an inventory item <i>k</i> with name tokens <i>T<sub>k</sub></i>, filler words
+(&ldquo;pack&rdquo;, &ldquo;box&rdquo;, &ldquo;pcs&rdquo;&hellip;) are removed and plurals stripped, and the score is</p>
+<div class="eq"><span class="math">s(d, k) = <span class="n">0.5</span>·|T<sub>k</sub> &#8745; T<sub>d</sub>|/|T<sub>k</sub>| + <span class="n">0.5</span>·D(T<sub>k</sub>, T<sub>d</sub>) + c(d, k)</span><span class="num">(3)</span></div>
+<p style="text-indent:0">where the first term measures how much of the item's name the line covers. If the line quotes the
+item's SKU, <i>s</i> = 1 regardless. The corroboration term <i>c</i> = 0.25 applies when the billed quantity equals the open
+received quantity and the unit price is within 1% of the received cost. It lets an abbreviation such as &ldquo;MCB 32A SP&rdquo;
+match &ldquo;MCB 32A single pole&rdquo;, but on its own it is too small to produce a match. A line is matched to the best
+item when <i>s</i> &#8805; 0.55.</p>
+
+<p><i>4) Line verdicts:</i> Each matched line is <i>over quantity</i> if it bills more units than remain received,
+<i>price mismatch</i> if its unit price exceeds the received cost by more than 5%, and otherwise <i>matched</i>. Unmatched
+lines are <i>not received</i>. The check fails (weight 50 for a new supplier) on any over-quantity line, or when unmatched lines
+account for more than 5% of the invoice value. It only warns (weight 15) for price mismatches or minor unmatched lines, such as
+freight. When every line matches, the invoice is <i>confirmed by goods received</i>. The vendor check then becomes a warning
+(weight 20) that asks the reviewer to register the supplier and confirm their bank details by phone before the first payment,
+and the PO requirement is waived because the delivery itself is the evidence.</p>
+
+<h3>Stage 3: Tool-Using Review Agent</h3>
+<p>The extraction, check results, goods-receipt match and rule score are passed to a second LLM call that has five read-only
+tools: <span class="mono">search_vendors</span>, <span class="mono">get_vendor_profile</span>,
+<span class="mono">get_vendor_invoice_history</span>, <span class="mono">get_purchase_order</span> and
+<span class="mono">get_goods_receipts</span>. Following the ReAct pattern [19], the agent alternates between reasoning and tool
+calls for up to six rounds, and tool use is disabled in the last round so that a verdict is guaranteed. Its instructions tell it
+to treat rule results as established facts, to weigh known fraud patterns (changed bank details, look-alike names, split
+billing, round-number totals, amounts far above history, pressure language), and to calibrate its score into the same three
+bands the decision uses. It returns, as structured output, a verdict (<i>authentic</i>, <i>suspicious</i> or
+<i>fraudulent</i>), a score <i>A</i> &#8712; [0,&nbsp;100], a plain-language summary and specific findings ranked by severity.
+Every tool call is recorded and shown to the reviewer.</p>
+
+<h3>Stage 4: Decision Fusion</h3>
+<p>The final risk is <i>r</i> = max(<i>R</i>, <i>A</i>). An invoice is <b>rejected</b> if it has a hard failure or
+<i>r</i> &#8805; 70. Otherwise it <b>needs review</b> if any check failed or <i>r</i> &#8805; 30, and is <b>verified</b> in all
+other cases. A failed check also raises <i>r</i> to at least 30, and a hard failure to at least 70. Taking the maximum gives the
+key safety property: the LLM can escalate an invoice that the rules missed, for example one with pressure language or an
+unusual amount, but it cannot argue away a failed check. Reviewers can approve, reject or re-analyse any invoice, and every
+action is written to an audit trail.</p>
+
+<h3>Implementation</h3>
+<p>ProcureMind is a Next.js 16 application written in TypeScript. It uses Drizzle ORM on PostgreSQL, and uploaded files are
+stored as <span class="mono">bytea</span>. It is deployed as a single Cloudflare Worker [22] through the OpenNext adapter, with the
+database on PlanetScale Postgres reached over TLS. Because a Worker cannot reuse a socket opened by another request, the code
+opens one database client per request. Long analyses are kept alive after the response begins streaming using the Workers
+<span class="mono">waitUntil</span> mechanism. The inventory module gives the warehouse forms to record deliveries and shows
+which deliveries are still awaiting an invoice.</p>
+
+<h2>Experimental Results</h2>
+
+<h3>Experimental Setup</h3>
+<p>We built a benchmark of ten invoices, each covering a distinct behaviour (Table&nbsp;II): two genuine invoices, one from a
+registered vendor and one from a first-time supplier whose goods were received, and eight anomalies. The invoices are digitally
+generated PDFs in an Indian GST layout. Each trial runs against a freshly seeded database containing six registered vendors,
+six POs, eighteen inventory items, ten GRNs (three of them from unregistered suppliers) and seventeen historical invoices
+spread over thirty days. The ten invoices are uploaded in order through the production code path:
+<span class="mono">createInvoiceFromUpload</span> followed by <span class="mono">analyzeInvoice</span>, with no mocks. We ran
+three independent trials, giving 30 analyses. The LLM was OpenAI <i>gpt-6-luna</i> with reasoning effort set to
+<i>low</i>. The application ran on a laptop against a local PostgreSQL&nbsp;16 database, so the measured times include network
+round trips to the model API.</p>
+
+<p>We treat an anomaly as the positive class. A <i>true positive</i> is an anomalous invoice that is not verified; a
+<i>false positive</i> is a genuine invoice that is not verified. <i>Exact agreement</i> means the outcome matches the
+expected one in Table&nbsp;II, with escalation from needs-review to rejected also accepted. To isolate each component we also
+derive, from the same runs, a <i>rules-only</i> decision (the fusion rule with <i>A</i> omitted) and an <i>agent-only</i>
+decision, in which <i>authentic</i>, <i>suspicious</i> and <i>fraudulent</i> map to verified, needs review and rejected.</p>
+
+<h3>Extraction Accuracy</h3>
+<p>Six key fields were compared with the text printed on each PDF (read with <span class="mono">pdftotext</span>): invoice
+number, GSTIN, PO number, grand total, bank account and the number of line items. All 180 field comparisons (6 fields &times;
+30 analyses) were correct, and so were all ten invoice types. This result is expected for clean, digitally generated PDFs. It
+should not be read as a measure of accuracy on scanned or photographed invoices.</p>
+
+
+
+<h3>Detection Performance and Ablation</h3>
+<p>Table&nbsp;III compares the three decision paths. The hybrid system detected every anomaly in all 30 analyses (recall 1.00),
+and 27 of 30 outcomes agreed exactly with the expected ones. All three errors were false positives on genuine invoices, and each
+was caused by the agent. In two of the three trials it rated invoice 07, the first-time supplier whose goods were confirmed, as
+<i>suspicious</i> (risk 38), and in one trial it did the same for invoice 01 (risk 35). Its reasons were in line with policy
+but stricter than the benchmark labels. For invoice 07 it wrote that the supplier's bank account &ldquo;cannot be checked
+against registered details&rdquo; and recommended holding the first payment until the account was confirmed.</p>
+
+<div class="tbl">
+<div class="cap">Table II<b>Per-Invoice Outcomes over Three Trials</b></div>
+<table class="compact">
+<thead><tr><th>#</th><th>Scenario</th><th>Failed checks</th><th class="r"><i>R</i></th><th class="c">Exp.</th><th class="c nw">T1 T2 T3</th><th class="r"><i>r</i></th></tr></thead>
+<tbody>
+<tr><td>01</td><td>Genuine, registered</td><td>&mdash;</td><td class="r nw">0</td><td class="c nw">V</td><td class="c nw">V <b>F</b> V</td><td class="r nw">8&ndash;35</td></tr>
+<tr><td>02</td><td>Bank changed, urgent</td><td>bank</td><td class="r nw">50</td><td class="c nw">X/F</td><td class="c nw">X X X</td><td class="r nw">82&ndash;92</td></tr>
+<tr><td>03</td><td>Inflated printed total</td><td>arithmetic</td><td class="r nw">30</td><td class="c nw">F</td><td class="c nw">F X F</td><td class="r nw">58&ndash;72</td></tr>
+<tr><td>04</td><td>Look-alike vendor</td><td>tax, bank, goods</td><td class="r nw">100</td><td class="c nw">X</td><td class="c nw">X X X</td><td class="r nw">100</td></tr>
+<tr><td>05</td><td>Re-used invoice no.</td><td>duplicate</td><td class="r nw">60</td><td class="c nw">X</td><td class="c nw">X X X</td><td class="r nw">78&ndash;85</td></tr>
+<tr><td>06</td><td>Exceeds PO balance</td><td>PO</td><td class="r nw">30</td><td class="c nw">F</td><td class="c nw">F F F</td><td class="r nw">48&ndash;55</td></tr>
+<tr><td>07</td><td>New, goods received</td><td>&mdash;</td><td class="r nw">20</td><td class="c nw">V</td><td class="c nw"><b>F</b> V <b>F</b></td><td class="r nw">24&ndash;38</td></tr>
+<tr><td>08</td><td>New, over-billed</td><td>vendor, goods</td><td class="r nw">100</td><td class="c nw">X</td><td class="c nw">X X X</td><td class="r nw">100</td></tr>
+<tr><td>09</td><td>New, nothing received</td><td>vendor, goods</td><td class="r nw">100</td><td class="c nw">X</td><td class="c nw">X X X</td><td class="r nw">100</td></tr>
+<tr><td>10</td><td>New, impersonated</td><td>vendor, goods</td><td class="r nw">100</td><td class="c nw">X</td><td class="c nw">X X X</td><td class="r nw">100</td></tr>
+</tbody>
+</table>
+<figcaption>V = verified, F = needs review, X = rejected. <i>R</i> = rule score (identical in every trial); <i>r</i> = final
+risk range over the trials. Bold marks outcomes that differ from the expected one. &ldquo;New&rdquo; = first-time supplier.</figcaption>
+</div>
+
+<div class="tbl">
+<div class="cap">Table III<b>Ablation of the Decision Paths (30 Analyses)</b></div>
+<table>
+<thead><tr><th>Decision path</th><th class="r">TP</th><th class="r">FP</th><th class="r">TN</th><th class="r">FN</th><th class="r">Prec.</th><th class="r">Rec.</th><th class="r">F1</th><th class="r">Exact</th></tr></thead>
+<tbody>
+<tr><td>Rules only</td><td class="r">24</td><td class="r">0</td><td class="r">6</td><td class="r">0</td><td class="r">1.00</td><td class="r">1.00</td><td class="r">1.00</td><td class="r">30/30</td></tr>
+<tr><td>Agent only</td><td class="r">24</td><td class="r">3</td><td class="r">3</td><td class="r">0</td><td class="r">0.89</td><td class="r">1.00</td><td class="r">0.94</td><td class="r">24/30</td></tr>
+<tr><td>Hybrid, max(<i>R</i>, <i>A</i>)</td><td class="r">24</td><td class="r">3</td><td class="r">3</td><td class="r">0</td><td class="r">0.89</td><td class="r">1.00</td><td class="r">0.94</td><td class="r">27/30</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>On this benchmark the rule engine alone was exact. The agent nevertheless added value in two ways. First, it
+<i>escalated the most dangerous attack</i>, the bank-detail change with pressure language in invoice 02. The rules scored it at
+50 (needs review), but the agent raised it to rejection in all three trials, citing the &ldquo;account frozen&rdquo; text as a
+likely account-takeover tactic. Second, it wrote a specific next step for the reviewer in every case, such as contacting the
+vendor on the registered number and not the one printed on the invoice. Used alone, however, the agent was less accurate: it
+returned <i>suspicious</i> for the duplicate (05) that the rules hard-reject, and it produced the three false positives. Fusion
+recovered three of the agent's six exact-outcome errors, because the hard-fail rules overrode its weaker verdicts. The agent
+was also not internally consistent. On invoice 02 it gave the verdict <i>suspicious</i> with scores of 82&ndash;92, which fall
+in its own &ldquo;likely fraud&rdquo; band.</p>
+
+<p><i>Goods-receipt matching.</i> Without GRN evidence, invoices 07&ndash;10 would all fail in the same way, as invoices
+from an unknown vendor. With GRN matching, the rules verified 07 in every trial and rejected 08&ndash;10, each with a specific
+reason: 80 helmets billed when 50 were received, safety vests that were never delivered, and a GSTIN that differed from the one
+recorded at delivery. In all twelve analyses of these four invoices, the agent called <span class="mono">get_goods_receipts</span>
+on its own initiative.</p>
+
+<p><i>Consistency.</i> The rule results were identical in every trial. The agent's verdict was the same in all three trials for
+8 of the 10 invoices, and the final outcome for 7 of the 10. All the variation came from borderline cases near the 30-point
+review threshold (01, 07) or the 70-point rejection threshold (03).</p>
+
+<h3>Line-Item Matcher Benchmark</h3>
+<p>To test (3) on its own, we wrote 36 invoice-style descriptions of the 18 catalogue items, two per item: one padded with pack
+sizes and notes, and one reordered or abbreviated (e.g., &ldquo;Mesh desk organizer&rdquo;, &ldquo;MCB 32A SP&rdquo;). We
+also wrote 16 descriptions of products not in stock: 8 deliberately close to a catalogue item and 8 unrelated (Table&nbsp;IV).
+The matcher ranked the correct item first for all 36 positives. At the 0.55 threshold it accepted 33 of them; the three misses
+were &ldquo;MCB 32A SP&rdquo; (0.52), &ldquo;Assembled PCB, revision C&rdquo; (0.54) and &ldquo;Hi-vis vest, reflective&rdquo;
+(0.27). When the quantity and price also agree, as they do for a genuine invoice, the corroboration bonus raises acceptance to
+35/36. No unrelated product came close to matching (highest score 0.16). The hard negatives exposed a real weakness: 3 of the
+8 crossed the threshold, namely &ldquo;27-inch IPS monitor&rdquo; matched to the 24-inch monitor, &ldquo;Safety shoes, ISI
+marked&rdquo; to the helmet, and &ldquo;Copper lugs 2.5 sq mm&rdquo; to the copper wire. Each such false match is still checked
+for quantity and price against the delivery. A difference in price, however, only produces a warning, so attribute-aware
+matching, covering sizes, ratings and product type, is needed.</p>
+
+<div class="tbl">
+<div class="cap">Table IV<b>Product Matcher on Paraphrased Descriptions</b></div>
+<table>
+<thead><tr><th>Set</th><th class="r">n</th><th>Metric</th><th class="r">Result</th></tr></thead>
+<tbody>
+<tr><td>Catalogue items</td><td class="r">36</td><td>top-1 correct</td><td class="r">36 (100%)</td></tr>
+<tr><td></td><td class="r"></td><td>accepted at <i>s</i> &#8805; 0.55</td><td class="r">33 (91.7%)</td></tr>
+<tr><td></td><td class="r"></td><td>accepted with corroboration</td><td class="r">35 (97.2%)</td></tr>
+<tr><td></td><td class="r"></td><td>mean score</td><td class="r">0.82</td></tr>
+<tr><td>Unrelated products</td><td class="r">8</td><td>false matches</td><td class="r">0 (max 0.16)</td></tr>
+<tr><td>Near-miss products</td><td class="r">8</td><td>false matches</td><td class="r">3 (37.5%)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Latency and Cost of Investigation</h3>
+<p>Table&nbsp;V breaks down the time taken by each stage. An analysis took 12.5&nbsp;s on average (9.6&ndash;16.4&nbsp;s). Almost
+all of it was spent on the two LLM stages, while the nine rule checks, including every database query, took 12.5&nbsp;ms on
+average, about 0.1% of the total. The agent made 3.0 &plusmn; 0.9 tool calls per invoice. It called
+<span class="mono">search_vendors</span> 26 times, <span class="mono">get_vendor_profile</span> and
+<span class="mono">get_vendor_invoice_history</span> 18 times each, <span class="mono">get_purchase_order</span> 15 times and
+<span class="mono">get_goods_receipts</span> 14 times. It never needed more than two rounds. Because results are streamed
+stage by stage, the reviewer sees the extracted fields after about 5&nbsp;s and the rule results almost immediately after that.
+On the deployed Worker an end-to-end analysis of invoice 09 produced the same outcome, rejected with risk 100.</p>
+
+<div class="tbl">
+<div class="cap">Table V<b>Stage Latency over 30 Analyses</b></div>
+<table>
+<thead><tr><th>Stage</th><th class="r">Mean</th><th class="r">SD</th><th class="r">Min</th><th class="r">Max</th></tr></thead>
+<tbody>
+<tr><td>1. Extraction (LLM)</td><td class="r">5.17 s</td><td class="r">1.09 s</td><td class="r">3.21 s</td><td class="r">8.13 s</td></tr>
+<tr><td>2. Rule checks (9, SQL)</td><td class="r">12.5 ms</td><td class="r">4.7 ms</td><td class="r">4 ms</td><td class="r">22 ms</td></tr>
+<tr><td>3. Agent review (LLM + tools)</td><td class="r">7.30 s</td><td class="r">1.33 s</td><td class="r">5.45 s</td><td class="r">10.56 s</td></tr>
+<tr><td>4. Decision + persist</td><td class="r">6.5 ms</td><td class="r">1.8 ms</td><td class="r">3 ms</td><td class="r">12 ms</td></tr>
+<tr><td><b>Total</b></td><td class="r"><b>12.50 s</b></td><td class="r">1.66 s</td><td class="r">9.62 s</td><td class="r">16.39 s</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Threats to Validity</h3>
+<p>The benchmark is small and synthetic, and it was written by the same team that designed the rules. The exact score of the
+rules-only path should therefore be read as a check that the system is internally consistent, not as evidence that it would
+generalise. All invoices are clean digital PDFs, only one model was evaluated, and each configuration was run three times. A
+meaningful estimate of accuracy would require a larger corpus of real, anonymised AP data that includes scanned documents and
+naturally occurring fraud.</p>
+
+<h2>Conclusion</h2>
+<p>We presented ProcureMind, an invoice-authentication system. It uses LLMs to read invoices and to investigate anomalies, while
+the payment decision stays tied to deterministic checks against the organisation's own records. The main methodological
+contribution is goods-receipt matching. It authenticates a first-time supplier by asking whether the goods it bills were
+physically received, and it protects against tax-ID impersonation and against billing the same delivery twice. On our
+benchmark the system caught every anomalous invoice in 30 end-to-end analyses, extracted all key fields correctly and returned a
+decision in about 12.5&nbsp;s. Fusing the two scores by taking the stricter of them proved to be a sound safety rule. It let
+the agent escalate a bank-detail-change attack that the rules alone would only have sent for review, and the hard-fail rules
+corrected the agent whenever it was too lenient. The experiments also showed the cost of that design: on the benchmark's
+labels, the agent's caution accounted for every false positive.</p>
+
+<p>Future work falls into four areas. (i) Make the agent consistent: enforce agreement between its verdict and its score, and
+handle known business conditions such as &ldquo;first payment to a new supplier&rdquo; as explicit tasks rather than as added
+risk. (ii) Use attribute-aware or embedding-based product matching to remove near-miss false matches. (iii) Evaluate on real,
+scanned and multi-currency invoices. (iv) Add the controls a production system needs, including authentication, separation of
+duties between the people who record deliveries and those who approve payments, and connection pooling for the serverless
+database.</p>
+
+<h2 class="unnumbered">Acknowledgment</h2>
+<p>The authors thank their project guide, Ms. Priyanki Dutta, Presidency University, Bangalore, for her guidance and
+support throughout this work.</p>
+
+<h2 class="unnumbered">References</h2>
+<ol class="refs">
+<li>Association of Certified Fraud Examiners, &ldquo;Occupational fraud 2024: A report to the nations,&rdquo; ACFE, Austin, TX, USA, 2024.</li>
+<li>Federal Bureau of Investigation, &ldquo;Internet crime report 2023,&rdquo; Internet Crime Complaint Center (IC3), Washington, DC, USA, 2024.</li>
+<li>Committee of Sponsoring Organizations of the Treadway Commission, <i>Internal Control&mdash;Integrated Framework</i>. Durham, NC, USA: AICPA, 2013.</li>
+<li>Z. Ji <i>et al.</i>, &ldquo;Survey of hallucination in natural language generation,&rdquo; <i>ACM Comput. Surv.</i>, vol. 55, no. 12, pp. 1&ndash;38, 2023.</li>
+<li>R. J. Bolton and D. J. Hand, &ldquo;Statistical fraud detection: A review,&rdquo; <i>Statist. Sci.</i>, vol. 17, no. 3, pp. 235&ndash;255, 2002.</li>
+<li>E. W. T. Ngai, Y. Hu, Y. H. Wong, Y. Chen, and X. Sun, &ldquo;The application of data mining techniques in financial fraud detection: A classification framework and an academic review of literature,&rdquo; <i>Decis. Support Syst.</i>, vol. 50, no. 3, pp. 559&ndash;569, 2011.</li>
+<li>J. West and M. Bhattacharya, &ldquo;Intelligent financial fraud detection: A comprehensive review,&rdquo; <i>Comput. Secur.</i>, vol. 57, pp. 47&ndash;66, 2016.</li>
+<li>M. J. Nigrini, <i>Benford's Law: Applications for Forensic Accounting, Auditing, and Fraud Detection</i>. Hoboken, NJ, USA: Wiley, 2012.</li>
+<li>B. Baesens, V. Van Vlasselaer, and W. Verbeke, <i>Fraud Analytics Using Descriptive, Predictive, and Social Network Techniques</i>. Hoboken, NJ, USA: Wiley, 2015.</li>
+<li>A. R. Katti <i>et al.</i>, &ldquo;Chargrid: Towards understanding 2D documents,&rdquo; in <i>Proc. Conf. Empirical Methods Natural Lang. Process. (EMNLP)</i>, 2018, pp. 4459&ndash;4469.</li>
+<li>Y. Xu, M. Li, L. Cui, S. Huang, F. Wei, and M. Zhou, &ldquo;LayoutLM: Pre-training of text and layout for document image understanding,&rdquo; in <i>Proc. 26th ACM SIGKDD Int. Conf. Knowl. Discovery Data Mining</i>, 2020, pp. 1192&ndash;1200.</li>
+<li>Y. Huang, T. Lv, L. Cui, Y. Lu, and F. Wei, &ldquo;LayoutLMv3: Pre-training for document AI with unified text and image masking,&rdquo; in <i>Proc. 30th ACM Int. Conf. Multimedia</i>, 2022, pp. 4083&ndash;4091.</li>
+<li>G. Kim <i>et al.</i>, &ldquo;OCR-free document understanding transformer,&rdquo; in <i>Proc. Eur. Conf. Comput. Vis. (ECCV)</i>, 2022, pp. 498&ndash;517.</li>
+<li>G. Jaume, H. K. Ekenel, and J.-P. Thiran, &ldquo;FUNSD: A dataset for form understanding in noisy scanned documents,&rdquo; in <i>Proc. Int. Conf. Document Anal. Recognit. Workshops (ICDARW)</i>, 2019, pp. 1&ndash;6.</li>
+<li>Z. Huang <i>et al.</i>, &ldquo;ICDAR2019 competition on scanned receipt OCR and information extraction,&rdquo; in <i>Proc. Int. Conf. Document Anal. Recognit. (ICDAR)</i>, 2019, pp. 1516&ndash;1520.</li>
+<li>S. Park <i>et al.</i>, &ldquo;CORD: A consolidated receipt dataset for post-OCR parsing,&rdquo; in <i>Proc. Document Intell. Workshop, NeurIPS</i>, 2019.</li>
+<li>OpenAI, &ldquo;GPT-4 technical report,&rdquo; arXiv:2303.08774, 2023.</li>
+<li>J. Wei <i>et al.</i>, &ldquo;Chain-of-thought prompting elicits reasoning in large language models,&rdquo; in <i>Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)</i>, 2022, pp. 24824&ndash;24837.</li>
+<li>S. Yao <i>et al.</i>, &ldquo;ReAct: Synergizing reasoning and acting in language models,&rdquo; in <i>Proc. Int. Conf. Learn. Represent. (ICLR)</i>, 2023.</li>
+<li>T. Schick <i>et al.</i>, &ldquo;Toolformer: Language models can teach themselves to use tools,&rdquo; in <i>Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)</i>, 2023.</li>
+<li>L. R. Dice, &ldquo;Measures of the amount of ecologic association between species,&rdquo; <i>Ecology</i>, vol. 26, no. 3, pp. 297&ndash;302, 1945.</li>
+<li>Cloudflare, &ldquo;Cloudflare Workers documentation.&rdquo; [Online]. Available: https://developers.cloudflare.com/workers/ (accessed Oct. 24, 2026).</li>
+</ol>
+
+
+</div>
+</body>
+</html>
