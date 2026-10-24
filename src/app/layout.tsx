@@ -13,7 +13,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "InvoiceGuard", template: "%s · InvoiceGuard" },
+  title: { default: "ProcureMind", template: "%s · ProcureMind" },
   description: "AI-assisted invoice authentication for procurement teams.",
 };
 

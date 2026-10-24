@@ -3,7 +3,8 @@ import { differenceInCalendarDays, parseISO } from "date-fns";
 import { db, invoices, purchaseOrders, vendors, type PurchaseOrder, type Vendor } from "@/db";
 import { formatDate, formatMoney } from "@/lib/format";
 import { maskAccount, nameSimilarity, normalizeId } from "@/lib/match";
-import type { CheckResult, LineItem } from "@/lib/types";
+import type { CheckResult, LineItem, ReceiptMatch } from "@/lib/types";
+import { goodsReceiptCheck, type GoodsCheckOutcome } from "./receipts";
 
 /** Everything the rule engine needs to know about an invoice. */
 export type InvoiceFacts = {
@@ -30,6 +31,7 @@ export type CheckOutcome = {
   checks: CheckResult[];
   vendor: Vendor | null;
   purchaseOrder: PurchaseOrder | null;
+  receiptMatch: ReceiptMatch | null;
   ruleScore: number;
 };
 
@@ -59,26 +61,21 @@ export async function runChecks(facts: InvoiceFacts): Promise<CheckOutcome> {
         ),
   );
 
-  // 2. Vendor registry
+  // 2. Vendor registry. A supplier we've never registered can still be authenticated by
+  //    matching the invoice to goods the warehouse actually received from them.
   const allVendors = await db.select().from(vendors);
   const { vendor, matchedBy } = matchVendor(allVendors, facts);
+  const goods = await goodsReceiptCheck({
+    invoiceId: facts.id,
+    invoiceDate: facts.invoiceDate,
+    currency: facts.currency,
+    subtotal: facts.subtotal,
+    total: facts.total,
+    lineItems: facts.lineItems,
+    supplier: { vendor, name: facts.vendorName, taxId: facts.vendorTaxId },
+  });
   if (!vendor) {
-    const nearest = allVendors
-      .map((v) => ({ v, score: nameSimilarity(v.name, facts.vendorName) }))
-      .sort((a, b) => b.score - a.score)[0];
-    const lookalike =
-      nearest && nearest.score >= 0.6
-        ? ` Closest registered name is "${nearest.v.name}" — possible impersonation.`
-        : "";
-    checks.push(
-      check(
-        "vendor",
-        "Approved vendor",
-        "fail",
-        `"${facts.vendorName ?? "Unknown vendor"}" is not in the approved vendor registry.${lookalike}`,
-        40,
-      ),
-    );
+    checks.push(newSupplierCheck(allVendors, facts, goods));
   } else if (vendor.status === "blocked") {
     checks.push(check("vendor", "Approved vendor", "fail", `${vendor.name} is on the blocked vendor list.`, 80));
   } else if (matchedBy === "similar name") {
@@ -169,18 +166,61 @@ export async function runChecks(facts: InvoiceFacts): Promise<CheckOutcome> {
   // 6. Arithmetic
   checks.push(arithmeticCheck(facts));
 
-  // 7. Purchase order
-  const { result: poResult, purchaseOrder } = await purchaseOrderCheck(facts, vendor);
+  // 7. Goods received
+  checks.push(goods.result);
+
+  // 8. Purchase order
+  const { result: poResult, purchaseOrder } = await purchaseOrderCheck(facts, vendor, goods);
   checks.push(poResult);
 
-  // 8. Dates
+  // 9. Dates
   checks.push(dateCheck(facts, purchaseOrder));
 
   const ruleScore = Math.min(
     100,
     checks.reduce((sum, c) => sum + c.weight, 0),
   );
-  return { checks, vendor, purchaseOrder, ruleScore };
+  return { checks, vendor, purchaseOrder, receiptMatch: goods.match, ruleScore };
+}
+
+function newSupplierCheck(allVendors: Vendor[], facts: InvoiceFacts, goods: GoodsCheckOutcome): CheckResult {
+  const label = "Approved vendor";
+  const name = facts.vendorName ?? "Unknown vendor";
+  const nearest = allVendors
+    .map((v) => ({ v, score: nameSimilarity(v.name, facts.vendorName) }))
+    .sort((a, b) => b.score - a.score)[0];
+  const lookalike =
+    nearest && nearest.score >= 0.6 ? ` Closest registered name is "${nearest.v.name}" — possible impersonation.` : "";
+
+  if (goods.confirmed) {
+    return check(
+      "vendor",
+      label,
+      "warn",
+      `"${name}" is a first-time supplier, not yet in the vendor registry. Their delivery is confirmed by ${goods.grnLabel}; register them and confirm their bank details by phone before the first payment.${lookalike}`,
+      20,
+    );
+  }
+  if (goods.result.status === "warn") {
+    return check(
+      "vendor",
+      label,
+      "warn",
+      `"${name}" is a first-time supplier and their invoice only partly matches goods received on ${goods.grnLabel}.${lookalike}`,
+      25,
+    );
+  }
+  return check(
+    "vendor",
+    label,
+    "fail",
+    `"${name}" is not in the approved vendor registry, and ${
+      goods.match
+        ? "the invoice doesn't agree with the goods we received from them"
+        : "there's no delivery from them to back the invoice"
+    }.${lookalike}`,
+    40,
+  );
 }
 
 export function matchVendor(allVendors: Vendor[], facts: Pick<InvoiceFacts, "vendorName" | "vendorTaxId">) {
@@ -315,8 +355,20 @@ function arithmeticCheck(facts: InvoiceFacts): CheckResult {
 async function purchaseOrderCheck(
   facts: InvoiceFacts,
   vendor: Vendor | null,
+  goods: GoodsCheckOutcome,
 ): Promise<{ result: CheckResult; purchaseOrder: PurchaseOrder | null }> {
   const label = "Purchase order match";
+  if (!facts.poNumber && goods.confirmed) {
+    return {
+      result: check(
+        "purchase_order",
+        label,
+        "skip",
+        `No PO quoted, but every line is backed by goods received on ${goods.grnLabel}.`,
+      ),
+      purchaseOrder: null,
+    };
+  }
   if (!facts.poNumber) {
     return {
       result: check("purchase_order", label, "warn", "No PO number quoted — non-PO invoices need manual sign-off.", 15),

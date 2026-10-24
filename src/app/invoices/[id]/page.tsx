@@ -2,16 +2,28 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
-import { ArrowLeftIcon, BotIcon, ExternalLinkIcon, InfoIcon, ListChecksIcon, UserIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  BotIcon,
+  ExternalLinkIcon,
+  InfoIcon,
+  ListChecksIcon,
+  PackageCheckIcon,
+  UserIcon,
+  UserPlusIcon,
+} from "lucide-react";
 import { db, invoiceEvents, invoices, purchaseOrders, vendors } from "@/db";
 import { ActivityLog } from "@/components/activity-log";
 import { InvoiceActions } from "@/components/invoice-actions";
 import { RiskGauge } from "@/components/risk-gauge";
+import { VendorDialog } from "@/components/vendor-dialog";
 import { CheckStatusIcon, SEVERITY_META, StatusBadge } from "@/components/status";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatBytes, formatDate, formatDateTime, formatMoney, timeAgo } from "@/lib/format";
 import { maskAccount, normalizeId, normalizeName } from "@/lib/match";
+import type { ReceiptLineStatus, ReceiptMatch } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata({ params }: PageProps<"/invoices/[id]">): Promise<Metadata> {
@@ -65,7 +77,26 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
               {invoice.vendorName ?? "Unknown vendor"} · {money(invoice.total)} · uploaded {timeAgo(invoice.createdAt)}
             </p>
           </div>
-          <InvoiceActions id={invoice.id} status={invoice.status} />
+          <div className="flex flex-wrap items-center gap-2">
+            {!vendor && invoice.vendorName && analyzed && invoice.status !== "rejected" && (
+              <VendorDialog
+                defaults={{
+                  name: invoice.vendorName,
+                  taxId: invoice.vendorTaxId,
+                  email: invoice.vendorEmail,
+                  address: invoice.vendorAddress,
+                  bankName: invoice.bankName,
+                  bankAccount: invoice.bankAccount,
+                  bankRouting: invoice.bankRouting,
+                }}
+              >
+                <Button variant="outline">
+                  <UserPlusIcon /> Register supplier
+                </Button>
+              </VendorDialog>
+            )}
+            <InvoiceActions id={invoice.id} status={invoice.status} />
+          </div>
         </div>
       </div>
 
@@ -169,6 +200,10 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
                 </ul>
               </CardContent>
             </Card>
+          )}
+
+          {invoice.receiptMatch && invoice.receiptMatch.lines.length > 0 && (
+            <GoodsReceivedCard match={invoice.receiptMatch} currency={invoice.currency} />
           )}
 
           <Card>
@@ -339,6 +374,103 @@ export default async function InvoicePage({ params }: PageProps<"/invoices/[id]"
         </div>
       </div>
     </div>
+  );
+}
+
+const LINE_STATUS: Record<ReceiptLineStatus, { label: string; variant: "good" | "warning" | "critical" }> = {
+  matched: { label: "Matched", variant: "good" },
+  price_mismatch: { label: "Price higher", variant: "warning" },
+  over_quantity: { label: "More than received", variant: "critical" },
+  not_received: { label: "Not received", variant: "critical" },
+};
+
+function GoodsReceivedCard({ match, currency }: { match: ReceiptMatch; currency: string | null }) {
+  const money = (n: number | null) => formatMoney(n, currency);
+  const qty = (n: number | null) => (n == null ? "—" : n.toLocaleString("en-IN"));
+  const matched = match.lines.filter((l) => l.status === "matched").length;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <PackageCheckIcon className="text-brand size-4" /> Goods received match
+        </CardTitle>
+        <CardDescription>
+          {match.receipts.length > 0 ? (
+            <>
+              {matched} of {match.lines.length} lines match deliveries on{" "}
+              {match.receipts.map((r, i) => (
+                <span key={r.id}>
+                  {i > 0 && ", "}
+                  <Link href="/inventory" className="text-foreground font-mono text-xs hover:underline">
+                    {r.grnNumber}
+                  </Link>{" "}
+                  ({formatDate(r.receivedOn)})
+                </span>
+              ))}
+            </>
+          ) : (
+            "None of the invoiced lines match goods we received from this supplier"
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full min-w-[34rem] text-sm">
+            <thead className="bg-muted/60 text-muted-foreground text-xs">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Invoice line</th>
+                <th className="px-3 py-2 text-right font-medium">Billed</th>
+                <th className="px-3 py-2 text-right font-medium whitespace-nowrap">Received, unbilled</th>
+                <th className="px-3 py-2 text-left font-medium">Result</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {match.lines.map((l, i) => {
+                const meta = LINE_STATUS[l.status];
+                return (
+                  <tr key={i} className="border-t align-top">
+                    <td className="px-3 py-2">
+                      <div>{l.description}</div>
+                      {l.item ? (
+                        <div className="text-muted-foreground text-xs">
+                          {l.item.name} · <span className="font-mono whitespace-nowrap">{l.item.sku}</span>
+                        </div>
+                      ) : (
+                        <div className="text-critical-ink text-xs">No matching delivery</div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      {qty(l.quantity)} × {money(l.unitPrice)}
+                    </td>
+                    <td
+                      className={cn(
+                        "px-3 py-2 text-right whitespace-nowrap",
+                        !l.item && "text-muted-foreground",
+                        l.status === "over_quantity" && "text-critical-ink",
+                      )}
+                    >
+                      {l.item ? (
+                        <>
+                          {qty(l.receivedQuantity)} ×{" "}
+                          <span className={cn(l.status === "price_mismatch" && "text-warning-ink")}>
+                            {money(l.receivedUnitCost)}
+                          </span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant={meta.variant}>{meta.label}</Badge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

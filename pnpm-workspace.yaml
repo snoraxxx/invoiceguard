@@ -2,3 +2,7 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+  workerd: true
+minimumReleaseAgeExclude:
+  - miniflare@5.20261019.2-beta
+  - wrangler@4.152.0

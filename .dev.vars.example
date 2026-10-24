@@ -1,0 +1,4 @@
+# Secrets for `pnpm preview` (the app running locally in the Workers runtime).
+# In production set these with `pnpm wrangler secret put <NAME>` instead.
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/invoiceguard
+OPENAI_API_KEY=

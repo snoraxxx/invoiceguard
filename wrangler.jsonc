@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "procuremind",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+  // Non-secret settings. Secrets are set with `wrangler secret put` (see README):
+  //   DATABASE_URL    Supabase transaction pooler connection string (port 6543)
+  //   OPENAI_API_KEY
+  "vars": {
+    "OPENAI_MODEL": "gpt-6-luna",
+    "OPENAI_REASONING_EFFORT": "low"
+  }
+}

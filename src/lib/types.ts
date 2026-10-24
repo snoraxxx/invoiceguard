@@ -8,7 +8,7 @@ export type LineItem = {
 export type CheckStatus = "pass" | "warn" | "fail" | "skip";
 
 export type CheckId =
-  "document" | "vendor" | "tax_id" | "bank" | "duplicate" | "arithmetic" | "purchase_order" | "dates";
+  "document" | "vendor" | "tax_id" | "bank" | "duplicate" | "arithmetic" | "goods_receipt" | "purchase_order" | "dates";
 
 export type CheckResult = {
   id: CheckId;
@@ -17,6 +17,25 @@ export type CheckResult = {
   detail: string;
   /** Risk points this check contributes to the rule score (0 when passing). */
   weight: number;
+};
+
+export type ReceiptLineStatus = "matched" | "price_mismatch" | "over_quantity" | "not_received";
+
+/** One invoice line compared with what the warehouse actually received. */
+export type ReceiptLineMatch = {
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  amount: number | null;
+  item: { sku: string; name: string; unit: string } | null;
+  receivedQuantity: number | null;
+  receivedUnitCost: number | null;
+  status: ReceiptLineStatus;
+};
+
+export type ReceiptMatch = {
+  receipts: { id: string; grnNumber: string; receivedOn: string }[];
+  lines: ReceiptLineMatch[];
 };
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";

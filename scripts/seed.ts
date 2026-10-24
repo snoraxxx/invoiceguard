@@ -1,5 +1,6 @@
 /**
- * Resets the database with a demo vendor registry, purchase orders and ~30 days of invoice history,
+ * Resets the database with a demo vendor registry, purchase orders, an inventory of goods received
+ * (including deliveries from suppliers that aren't registered yet) and ~30 days of invoice history,
  * and writes a set of sample invoices to ./samples that exercise each fraud check when uploaded.
  *
  *   pnpm db:seed
@@ -10,7 +11,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { format, subDays } from "date-fns";
 import { sql } from "drizzle-orm";
-import { db, invoiceEvents, invoiceFiles, invoices, purchaseOrders, vendors } from "@/db";
+import {
+  db,
+  goodsReceiptLines,
+  goodsReceipts,
+  inventoryItems,
+  invoiceEvents,
+  invoiceFiles,
+  invoices,
+  purchaseOrders,
+  vendors,
+} from "@/db";
 import { runChecks } from "@/lib/agent/checks";
 import { decide } from "@/lib/agent/pipeline";
 import { renderInvoicePdf, totals, type InvoiceSpec } from "./invoice-pdf";
@@ -80,6 +91,245 @@ const V = {
   },
 };
 type VendorKey = keyof typeof V;
+
+// First-time suppliers: not in the vendor registry, but the warehouse has (or hasn't) received goods from them.
+const NEW = {
+  lumen: {
+    name: "Lumen Electricals",
+    taxId: "29AAJFL4455R1Z6",
+    email: "accounts@lumenelectricals.in",
+    address: "14 SP Road, Shivajinagar\nBengaluru, Karnataka 560002",
+    bank: { name: "Canara Bank", account: "0412201009876", routing: "CNRB0000412" },
+    accent: [0.85, 0.6, 0.05] as [number, number, number],
+  },
+  kaveri: {
+    name: "Kaveri Safety Traders",
+    taxId: "33AAKFK7788S1Z3",
+    email: "sales@kaverisafety.in",
+    address: "7 Anna Salai, Teynampet\nChennai, Tamil Nadu 600018",
+    bank: { name: "Indian Bank", account: "6123498701", routing: "IDIB000T045" },
+    accent: [0.1, 0.5, 0.3] as [number, number, number],
+  },
+  orbit: {
+    name: "Orbit IT Peripherals",
+    taxId: "27AAOFO2211T1Z9",
+    email: "billing@orbitperipherals.com",
+    address: "Unit 12, Andheri Kurla Road\nMumbai, Maharashtra 400059",
+    bank: { name: "Federal Bank", account: "15550100045678", routing: "FDRL0001555" },
+    accent: [0.35, 0.2, 0.7] as [number, number, number],
+  },
+};
+
+const ITEMS = [
+  {
+    sku: "OFF-PAP-A4",
+    name: "A4 copier paper, 75 gsm (box of 5 reams)",
+    category: "Office supplies",
+    unit: "box",
+    onHand: 34,
+    reorder: 20,
+  },
+  {
+    sku: "OFF-MRK-WB",
+    name: "Whiteboard markers, assorted (pack of 12)",
+    category: "Office supplies",
+    unit: "pack",
+    onHand: 8,
+    reorder: 10,
+  },
+  {
+    sku: "OFF-ORG-DSK",
+    name: "Desk organiser, mesh",
+    category: "Office supplies",
+    unit: "pcs",
+    onHand: 25,
+    reorder: 5,
+  },
+  {
+    sku: "OFF-TNR-BLK",
+    name: "Printer toner cartridge, black",
+    category: "Office supplies",
+    unit: "pcs",
+    onHand: 9,
+    reorder: 6,
+  },
+  { sku: "FUR-CHR-ERG", name: "Ergonomic office chair", category: "Furniture", unit: "pcs", onHand: 2, reorder: 2 },
+  {
+    sku: "PKG-BOX-3P",
+    name: "Corrugated shipping box, 3-ply",
+    category: "Packaging",
+    unit: "pcs",
+    onHand: 4200,
+    reorder: 1500,
+  },
+  { sku: "PKG-SLV-PRT", name: "Printed product sleeve", category: "Packaging", unit: "pcs", onHand: 640, reorder: 500 },
+  {
+    sku: "PKG-BWR-ROL",
+    name: "Bubble wrap roll, 1 m x 100 m",
+    category: "Packaging",
+    unit: "roll",
+    onHand: 31,
+    reorder: 10,
+  },
+  {
+    sku: "PKG-GBX-RGD",
+    name: "Rigid gift box, printed",
+    category: "Packaging",
+    unit: "pcs",
+    onHand: 1200,
+    reorder: 300,
+  },
+  { sku: "ELC-PCB-RVC", name: "PCB assembly, rev C", category: "Electronics", unit: "pcs", onHand: 12, reorder: 40 },
+  {
+    sku: "ELC-LED-PNL",
+    name: "LED panel light 2x2 ft 36W",
+    category: "Electrical",
+    unit: "pcs",
+    onHand: 40,
+    reorder: 10,
+  },
+  {
+    sku: "ELC-CBL-25",
+    name: "Copper wire 2.5 sq mm (90 m coil)",
+    category: "Electrical",
+    unit: "coil",
+    onHand: 6,
+    reorder: 2,
+  },
+  { sku: "ELC-MCB-32", name: "MCB 32A single pole", category: "Electrical", unit: "pcs", onHand: 30, reorder: 10 },
+  { sku: "SAF-HLM-ISI", name: "Safety helmet, ISI marked", category: "Safety", unit: "pcs", onHand: 50, reorder: 20 },
+  { sku: "SAF-GLV-NIT", name: "Nitrile gloves (box of 100)", category: "Safety", unit: "box", onHand: 20, reorder: 8 },
+  { sku: "SAF-VST-HV", name: "High-visibility safety vest", category: "Safety", unit: "pcs", onHand: 4, reorder: 15 },
+  { sku: "IT-DCK-USBC", name: "USB-C docking station", category: "IT hardware", unit: "pcs", onHand: 3, reorder: 5 },
+  { sku: "IT-MON-24", name: "24-inch IPS monitor", category: "IT hardware", unit: "pcs", onHand: 7, reorder: 4 },
+];
+type Sku = (typeof ITEMS)[number]["sku"];
+
+type Delivery = {
+  grn: string;
+  daysAgo: number;
+  supplier: { vendor: VendorKey } | { new: keyof typeof NEW; taxId?: string };
+  poNumber?: string;
+  receivedBy: string;
+  notes?: string;
+  lines: [Sku, number, number][]; // sku, quantity, unit cost
+};
+
+// Goods received at the warehouse. Services vendors (cloud, freight, facilities) deliver nothing to count.
+const DELIVERIES: Delivery[] = [
+  {
+    grn: "GRN-2026-0301",
+    daysAgo: 31,
+    supplier: { vendor: "northwind" },
+    poNumber: "PO-2026-0101",
+    receivedBy: "Ravi K. (Stores)",
+    lines: [
+      ["OFF-PAP-A4", 60, 480],
+      ["OFF-MRK-WB", 20, 360],
+    ],
+  },
+  {
+    grn: "GRN-2026-0306",
+    daysAgo: 24,
+    supplier: { vendor: "sparrow" },
+    poNumber: "PO-2026-0105",
+    receivedBy: "Meena S. (Dispatch)",
+    lines: [
+      ["PKG-BOX-3P", 5000, 18.5],
+      ["PKG-SLV-PRT", 2000, 17.25],
+    ],
+  },
+  {
+    grn: "GRN-2026-0309",
+    daysAgo: 22,
+    supplier: { vendor: "northwind" },
+    poNumber: "PO-2026-0101",
+    receivedBy: "Ravi K. (Stores)",
+    lines: [["FUR-CHR-ERG", 6, 8900]],
+  },
+  {
+    grn: "GRN-2026-0312",
+    daysAgo: 12,
+    supplier: { vendor: "quantix" },
+    receivedBy: "Anil P. (Production)",
+    notes: "Received under protest — vendor blocked, QC hold.",
+    lines: [["ELC-PCB-RVC", 150, 740]],
+  },
+  {
+    grn: "GRN-2026-0315",
+    daysAgo: 9,
+    supplier: { new: "lumen" },
+    receivedBy: "Ravi K. (Stores)",
+    notes: "Emergency purchase for the Whitefield office fit-out. Supplier onboarding pending.",
+    lines: [
+      ["ELC-LED-PNL", 40, 1850],
+      ["ELC-CBL-25", 6, 3200],
+      ["ELC-MCB-32", 30, 240],
+    ],
+  },
+  {
+    grn: "GRN-2026-0318",
+    daysAgo: 6,
+    supplier: { new: "kaveri" },
+    receivedBy: "Meena S. (Dispatch)",
+    notes: "Safety gear for the new packing line.",
+    lines: [
+      ["SAF-HLM-ISI", 50, 420],
+      ["SAF-GLV-NIT", 20, 540],
+    ],
+  },
+  {
+    grn: "GRN-2026-0320",
+    daysAgo: 4,
+    supplier: { vendor: "northwind" },
+    poNumber: "PO-2026-0101",
+    receivedBy: "Ravi K. (Stores)",
+    lines: [["OFF-TNR-BLK", 12, 3200]],
+  },
+  {
+    grn: "GRN-2026-0321",
+    daysAgo: 3,
+    supplier: { vendor: "sparrow" },
+    poNumber: "PO-2026-0105",
+    receivedBy: "Meena S. (Dispatch)",
+    lines: [["PKG-BWR-ROL", 40, 650]],
+  },
+  {
+    grn: "GRN-2026-0323",
+    daysAgo: 2,
+    supplier: { vendor: "northwind" },
+    poNumber: "PO-2026-0101",
+    receivedBy: "Ravi K. (Stores)",
+    lines: [
+      ["OFF-PAP-A4", 40, 480],
+      ["OFF-ORG-DSK", 25, 540],
+    ],
+  },
+  {
+    grn: "GRN-2026-0324",
+    daysAgo: 1,
+    supplier: { vendor: "sparrow" },
+    poNumber: "PO-2026-0105",
+    receivedBy: "Meena S. (Dispatch)",
+    lines: [["PKG-GBX-RGD", 1200, 68]],
+  },
+];
+
+function newSupplierSpec(
+  key: keyof typeof NEW,
+  o: Partial<InvoiceSpec> & Pick<InvoiceSpec, "invoiceNumber" | "invoiceDate" | "items">,
+): InvoiceSpec {
+  const n = NEW[key];
+  return {
+    vendor: { name: n.name, address: n.address, taxId: n.taxId, email: n.email },
+    dueDate: null,
+    poNumber: null,
+    taxRate: 0.18,
+    bank: n.bank,
+    accent: n.accent,
+    ...o,
+  };
+}
 
 function spec(
   key: VendorKey,
@@ -402,11 +652,75 @@ const SAMPLES: { file: string; spec: InvoiceSpec }[] = [
       items: [{ description: "Printed gift boxes, rigid", quantity: 1200, unitPrice: 68 }],
     }),
   },
+  {
+    file: "07-new-supplier-goods-received-lumen.pdf",
+    spec: newSupplierSpec("lumen", {
+      invoiceNumber: "LE/2026-27/014",
+      invoiceDate: day(8),
+      dueDate: day(-22),
+      items: [
+        { description: "LED panel light 2x2 ft, 36W", quantity: 40, unitPrice: 1850 },
+        { description: "Copper wire 2.5 sq mm, 90 m coil", quantity: 6, unitPrice: 3200 },
+        { description: "MCB 32A SP", quantity: 30, unitPrice: 240 },
+      ],
+    }),
+  },
+  {
+    file: "08-new-supplier-overbilled-kaveri.pdf",
+    spec: newSupplierSpec("kaveri", {
+      invoiceNumber: "KST-0457",
+      invoiceDate: day(5),
+      dueDate: day(-10),
+      items: [
+        { description: "Safety helmets (ISI marked)", quantity: 80, unitPrice: 420 },
+        { description: "Nitrile gloves (box of 100)", quantity: 20, unitPrice: 610 },
+        { description: "High-visibility safety vests", quantity: 30, unitPrice: 380 },
+      ],
+    }),
+  },
+  {
+    file: "09-new-supplier-nothing-received-orbit.pdf",
+    spec: newSupplierSpec("orbit", {
+      invoiceNumber: "OIP/1093",
+      invoiceDate: day(1),
+      dueDate: day(-6),
+      items: [
+        { description: "USB-C docking stations", quantity: 15, unitPrice: 11500 },
+        { description: "24-inch IPS monitors", quantity: 10, unitPrice: 13900 },
+      ],
+      remarks:
+        "Goods dispatched via courier. Kindly release payment on priority to avoid delay in the next consignment.",
+    }),
+  },
+  {
+    file: "10-impersonated-new-supplier-lumen.pdf",
+    spec: {
+      ...newSupplierSpec("lumen", {
+        invoiceNumber: "LE/2026-27/015",
+        invoiceDate: day(2),
+        dueDate: day(-3),
+        items: [
+          { description: "LED panel light 2x2 ft, 36W", quantity: 40, unitPrice: 1850 },
+          { description: "Copper wire 2.5 sq mm, 90 m coil", quantity: 6, unitPrice: 3200 },
+          { description: "MCB 32A SP", quantity: 30, unitPrice: 240 },
+        ],
+      }),
+      vendor: {
+        name: "Lumen Electricals",
+        address: "Shop 3, 2nd Floor, Lamington Road\nMumbai 400007",
+        taxId: "27AAJFL9911R1Z2",
+        email: "lumen.electricals.accounts@gmail.com",
+      },
+      bank: { name: "Bank of India", account: "008810110004417", routing: "BKID0000088" },
+    },
+  },
 ];
 
 async function main() {
   console.log("Resetting tables…");
-  await db.execute(sql`truncate ${invoiceEvents}, ${invoiceFiles}, ${invoices}, ${purchaseOrders}, ${vendors} cascade`);
+  await db.execute(
+    sql`truncate ${invoiceEvents}, ${invoiceFiles}, ${invoices}, ${goodsReceiptLines}, ${goodsReceipts}, ${inventoryItems}, ${purchaseOrders}, ${vendors} cascade`,
+  );
 
   const vendorIds = {} as Record<VendorKey, string>;
   for (const [key, v] of Object.entries(V) as [VendorKey, (typeof V)[VendorKey]][]) {
@@ -477,6 +791,59 @@ async function main() {
   await db.insert(purchaseOrders).values(pos);
   console.log(`  ${pos.length} purchase orders`);
 
+  const items = await db
+    .insert(inventoryItems)
+    .values(
+      ITEMS.map((i) => ({
+        sku: i.sku,
+        name: i.name,
+        category: i.category,
+        unit: i.unit,
+        quantityOnHand: i.onHand,
+        reorderLevel: i.reorder,
+      })),
+    )
+    .returning({ id: inventoryItems.id, sku: inventoryItems.sku });
+  const itemIds = Object.fromEntries(items.map((i) => [i.sku, i.id])) as Record<Sku, string>;
+  console.log(`  ${items.length} inventory items`);
+
+  for (const d of DELIVERIES) {
+    const supplier =
+      "vendor" in d.supplier
+        ? {
+            vendorId: vendorIds[d.supplier.vendor],
+            supplierName: V[d.supplier.vendor].name,
+            supplierTaxId: V[d.supplier.vendor].taxId,
+          }
+        : {
+            vendorId: null,
+            supplierName: NEW[d.supplier.new].name,
+            supplierTaxId: d.supplier.taxId ?? NEW[d.supplier.new].taxId,
+          };
+    const createdAt = subDays(new Date(), d.daysAgo);
+    const [receipt] = await db
+      .insert(goodsReceipts)
+      .values({
+        grnNumber: d.grn,
+        ...supplier,
+        poNumber: d.poNumber ?? null,
+        receivedOn: day(d.daysAgo),
+        receivedBy: d.receivedBy,
+        notes: d.notes ?? null,
+        createdAt,
+      })
+      .returning({ id: goodsReceipts.id });
+    await db.insert(goodsReceiptLines).values(
+      d.lines.map(([sku, quantity, unitCost]) => ({
+        receiptId: receipt.id,
+        itemId: itemIds[sku],
+        quantity,
+        unitCost,
+      })),
+    );
+  }
+  console.log(`  ${DELIVERIES.length} goods receipts`);
+
   for (const h of HISTORY) {
     const data = await renderInvoicePdf(h.spec);
     const sha = createHash("sha256").update(data).digest("hex");
@@ -520,7 +887,7 @@ async function main() {
       total: t.total,
       lineItems,
     };
-    const { checks, vendor, purchaseOrder, ruleScore } = await runChecks(facts);
+    const { checks, vendor, purchaseOrder, receiptMatch, ruleScore } = await runChecks(facts);
     const { status, riskScore } = decide(checks, ruleScore, null);
     await db
       .update(invoices)
@@ -547,6 +914,7 @@ async function main() {
         total: t.total,
         lineItems,
         checks,
+        receiptMatch,
         analyzedAt: createdAt,
         updatedAt: createdAt,
       })

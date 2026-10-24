@@ -11,7 +11,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { AgentStep, CheckResult, Finding, LineItem } from "@/lib/types";
+import type { AgentStep, CheckResult, Finding, LineItem, ReceiptMatch } from "@/lib/types";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
@@ -94,6 +94,8 @@ export const invoices = pgTable(
     checks: jsonb("checks").$type<CheckResult[]>().notNull().default([]),
     findings: jsonb("findings").$type<Finding[]>().notNull().default([]),
     agentSteps: jsonb("agent_steps").$type<AgentStep[]>().notNull().default([]),
+    /** Invoice lines matched against goods received; the receipts listed here count as billed. */
+    receiptMatch: jsonb("receipt_match").$type<ReceiptMatch>(),
     summary: text("summary"),
     model: text("model"),
     error: text("error"),
@@ -132,8 +134,55 @@ export const invoiceEvents = pgTable(
   (t) => [index("invoice_events_invoice_idx").on(t.invoiceId)],
 );
 
+export const inventoryItems = pgTable("inventory_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sku: text("sku").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  unit: text("unit").notNull().default("pcs"),
+  quantityOnHand: numeric("quantity_on_hand", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+  reorderLevel: numeric("reorder_level", { precision: 12, scale: 2, mode: "number" }).notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A delivery logged at the warehouse (goods received note). Suppliers need not be in the vendor registry. */
+export const goodsReceipts = pgTable(
+  "goods_receipts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    grnNumber: text("grn_number").notNull().unique(),
+    vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+    supplierName: text("supplier_name").notNull(),
+    supplierTaxId: text("supplier_tax_id"),
+    poNumber: text("po_number"),
+    receivedOn: date("received_on").notNull(),
+    receivedBy: text("received_by"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("goods_receipts_received_on_idx").on(t.receivedOn)],
+);
+
+export const goodsReceiptLines = pgTable(
+  "goods_receipt_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    receiptId: uuid("receipt_id")
+      .notNull()
+      .references(() => goodsReceipts.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => inventoryItems.id, { onDelete: "restrict" }),
+    quantity: numeric("quantity", { precision: 12, scale: 2, mode: "number" }).notNull(),
+    unitCost: numeric("unit_cost", { precision: 14, scale: 2, mode: "number" }).notNull(),
+  },
+  (t) => [index("goods_receipt_lines_receipt_idx").on(t.receiptId)],
+);
+
 export type Vendor = typeof vendors.$inferSelect;
 export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type InvoiceEvent = typeof invoiceEvents.$inferSelect;
+export type InventoryItem = typeof inventoryItems.$inferSelect;
+export type GoodsReceipt = typeof goodsReceipts.$inferSelect;
 export type InvoiceStatus = (typeof invoiceStatus.enumValues)[number];

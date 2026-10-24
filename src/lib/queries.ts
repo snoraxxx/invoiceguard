@@ -1,6 +1,17 @@
 import { and, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 import { format, subDays } from "date-fns";
-import { db, invoices, purchaseOrders, vendors, type InvoiceStatus } from "@/db";
+import {
+  db,
+  goodsReceiptLines,
+  goodsReceipts,
+  inventoryItems,
+  invoices,
+  purchaseOrders,
+  vendors,
+  type InvoiceStatus,
+} from "@/db";
+import { matchVendor } from "@/lib/agent/checks";
+import { claimedReceipts, loadReceipts } from "@/lib/agent/receipts";
 
 export const invoiceListColumns = {
   id: invoices.id,
@@ -136,4 +147,69 @@ export async function listPurchaseOrders() {
     .from(purchaseOrders)
     .innerJoin(vendors, eq(vendors.id, purchaseOrders.vendorId))
     .orderBy(desc(purchaseOrders.issuedOn));
+}
+
+export type DeliveryRow = Awaited<ReturnType<typeof listDeliveries>>[number];
+
+/** Goods receipts, newest first, with whether an invoice has billed them yet. */
+export async function listDeliveries() {
+  const [receipts, claims, registry] = await Promise.all([
+    loadReceipts(),
+    claimedReceipts(),
+    db.select().from(vendors),
+  ]);
+  return receipts.reverse().map((r) => {
+    const byIdentity = matchVendor(registry, { vendorName: r.supplierName, vendorTaxId: r.supplierTaxId });
+    const registered = r.vendorId
+      ? (registry.find((v) => v.id === r.vendorId) ?? null)
+      : byIdentity.matchedBy === "similar name"
+        ? null
+        : byIdentity.vendor;
+    return {
+      id: r.id,
+      grnNumber: r.grnNumber,
+      supplierName: r.supplierName,
+      supplierTaxId: r.supplierTaxId,
+      registeredVendor: registered?.name ?? null,
+      poNumber: r.poNumber,
+      receivedOn: r.receivedOn,
+      receivedBy: r.receivedBy,
+      notes: r.notes,
+      lines: r.lines.map((l) => ({
+        name: l.item.name,
+        sku: l.item.sku,
+        unit: l.item.unit,
+        quantity: l.quantity,
+        unitCost: l.unitCost,
+      })),
+      value: r.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0),
+      billedBy: claims.get(r.id) ?? null,
+    };
+  });
+}
+
+export type InventoryRow = Awaited<ReturnType<typeof listInventory>>[number];
+
+export async function listInventory() {
+  const last = db
+    .selectDistinctOn([goodsReceiptLines.itemId], {
+      itemId: goodsReceiptLines.itemId,
+      receivedOn: goodsReceipts.receivedOn,
+      supplierName: goodsReceipts.supplierName,
+      unitCost: goodsReceiptLines.unitCost,
+    })
+    .from(goodsReceiptLines)
+    .innerJoin(goodsReceipts, eq(goodsReceipts.id, goodsReceiptLines.receiptId))
+    .orderBy(goodsReceiptLines.itemId, desc(goodsReceipts.receivedOn), desc(goodsReceipts.createdAt))
+    .as("last");
+  return db
+    .select({
+      item: inventoryItems,
+      lastReceivedOn: last.receivedOn,
+      lastSupplier: last.supplierName,
+      lastUnitCost: last.unitCost,
+    })
+    .from(inventoryItems)
+    .leftJoin(last, eq(last.itemId, inventoryItems.id))
+    .orderBy(inventoryItems.category, inventoryItems.name);
 }

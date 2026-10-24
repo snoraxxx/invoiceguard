@@ -4,10 +4,11 @@ import { zodResponsesFunction, zodTextFormat } from "openai/helpers/zod";
 import type { ResponseInputItem } from "openai/resources/responses/responses";
 import { db, invoices, purchaseOrders, vendors } from "@/db";
 import { nameSimilarity, normalizeId } from "@/lib/match";
-import type { AgentStep, CheckResult, Finding } from "@/lib/types";
-import { billedAgainstPo } from "./checks";
+import type { AgentStep, CheckResult, Finding, ReceiptMatch } from "@/lib/types";
+import { billedAgainstPo, matchVendor } from "./checks";
 import type { Extraction } from "./extract";
 import { getOpenAI, MODEL, REASONING_EFFORT } from "./openai";
+import { describeSupplierReceipts } from "./receipts";
 
 const MAX_TOOL_ROUNDS = 6;
 
@@ -49,11 +50,20 @@ const tools = [
     description: "Look up a purchase order by number, including the amount already billed against it.",
     parameters: z.object({ po_number: z.string() }),
   }),
+  zodResponsesFunction({
+    name: "get_goods_receipts",
+    description:
+      "Deliveries the warehouse logged from a supplier in the last 6 months (goods received notes): items, quantities, unit costs, the tax ID recorded at delivery, and whether each delivery is already billed. Works for suppliers that are not in the vendor registry.",
+    parameters: z.object({
+      supplier_name: z.string(),
+      supplier_tax_id: z.string().nullable().describe("Tax ID printed on the invoice, if any."),
+    }),
+  }),
 ];
 
 type ToolName = (typeof tools)[number]["name"];
 
-async function runTool(name: ToolName | string, args: Record<string, unknown>): Promise<unknown> {
+async function runTool(name: ToolName | string, args: Record<string, unknown>, invoiceId: string): Promise<unknown> {
   switch (name) {
     case "search_vendors": {
       const all = await db.select().from(vendors);
@@ -119,6 +129,12 @@ async function runTool(name: ToolName | string, args: Record<string, unknown>): 
       if (!po) return { error: "No purchase order with that number" };
       return { ...po, billed_so_far: await billedAgainstPo(po.id) };
     }
+    case "get_goods_receipts": {
+      const name = String(args.supplier_name ?? "");
+      const taxId = args.supplier_tax_id ? String(args.supplier_tax_id) : null;
+      const { vendor } = matchVendor(await db.select().from(vendors), { vendorName: name, vendorTaxId: taxId });
+      return describeSupplierReceipts({ vendor, name, taxId }, invoiceId);
+    }
     default:
       return { error: `Unknown tool ${name}` };
   }
@@ -135,19 +151,31 @@ How to work:
 3. Weigh known fraud patterns: changed bank details, vendor impersonation / look-alike names, duplicate or split billing,
    inflated or round-number totals, invoices far above historical norms, missing or mismatched POs, pressure language,
    and visual tampering noted by the document analyst.
+   For a first-time supplier (not in the registry) the strongest evidence is whether we actually received what they bill:
+   check get_goods_receipts. Goods received that match the invoice line by line make the invoice credible; billing for
+   goods never delivered, more units than delivered, or a tax ID that differs from the one recorded at delivery is a
+   serious red flag. Even when it matches, remind the reviewer to register the supplier and confirm bank details.
 4. Calibrate risk_score: 0-29 genuine and routine; 30-69 needs a human to confirm something specific; 70-100 likely fraud
    or must not be paid. Any failed rule check means the score should be at least 30.
 5. Findings must be specific and actionable ("Call the vendor on their registered number to confirm the new account"),
    never generic. Include positive evidence as 'info' findings when it matters. Do not repeat every rule check verbatim.`;
 
 export async function reviewInvoice(
-  input: { extraction: Extraction; checks: CheckResult[]; vendorId: string | null; ruleScore: number },
+  input: {
+    invoiceId: string;
+    extraction: Extraction;
+    checks: CheckResult[];
+    vendorId: string | null;
+    receiptMatch: ReceiptMatch | null;
+    ruleScore: number;
+  },
   onStep: (step: AgentStep) => void,
 ): Promise<Review> {
   const openai = getOpenAI();
   const context = {
     extracted_invoice: input.extraction,
     matched_vendor_id: input.vendorId,
+    goods_received_match: input.receiptMatch,
     rule_checks: input.checks.map(({ label, status, detail }) => ({ label, status, detail })),
     rule_risk_score: input.ruleScore,
     today: new Date().toISOString().slice(0, 10),
@@ -174,7 +202,7 @@ export async function reviewInvoice(
       } catch {
         // leave args empty; the tool will report the problem back to the model
       }
-      const result = await runTool(call.name, args).catch((e: Error) => ({ error: e.message }));
+      const result = await runTool(call.name, args, input.invoiceId).catch((e: Error) => ({ error: e.message }));
       const output = JSON.stringify(result);
       onStep({
         kind: "tool",

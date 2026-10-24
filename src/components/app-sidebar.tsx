@@ -8,6 +8,7 @@ import {
   FileTextIcon,
   LayoutDashboardIcon,
   MenuIcon,
+  PackageIcon,
   ShieldCheckIcon,
   UploadIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboardIcon },
   { href: "/upload", label: "Upload & verify", icon: UploadIcon },
   { href: "/invoices", label: "Invoices", icon: FileTextIcon },
+  { href: "/inventory", label: "Inventory", icon: PackageIcon },
   { href: "/vendors", label: "Vendors", icon: Building2Icon },
   { href: "/purchase-orders", label: "Purchase orders", icon: ClipboardListIcon },
 ] as const;
@@ -40,8 +42,8 @@ function Brand() {
         <ShieldCheckIcon className="size-[18px]" />
       </span>
       <span className="leading-tight">
-        <span className="block text-[15px] font-semibold tracking-tight">InvoiceGuard</span>
-        <span className="text-muted-foreground block text-[11px]">Procurement AP</span>
+        <span className="block text-[15px] font-semibold tracking-tight">ProcureMind</span>
+        {/* <span className="text-muted-foreground block text-[11px]">Procurement AP</span> */}
       </span>
     </Link>
   );

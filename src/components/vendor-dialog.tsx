@@ -28,11 +28,14 @@ import type { Vendor } from "@/db/schema";
 
 export function VendorDialog({
   vendor,
+  defaults,
   children,
   open: controlledOpen,
   onOpenChange,
 }: {
   vendor?: Vendor;
+  /** Prefill for a new vendor, e.g. details read from a first-time supplier's invoice. */
+  defaults?: Partial<Pick<Vendor, "name" | "taxId" | "email" | "address" | "bankName" | "bankAccount" | "bankRouting">>;
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -42,12 +45,15 @@ export function VendorDialog({
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [pending, startTransition] = useTransition();
+  const values = vendor ?? defaults;
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await saveVendor(vendor?.id ?? null, formData);
       if (!result.ok) return void toast.error(result.error);
-      toast.success(vendor ? "Vendor updated" : "Vendor added");
+      toast.success(
+        vendor ? "Vendor updated" : defaults ? "Supplier registered — re-check the invoice to link it" : "Vendor added",
+      );
       setOpen(false);
       router.refresh();
     });
@@ -65,19 +71,19 @@ export function VendorDialog({
         </DialogHeader>
         <form action={onSubmit} className="flex flex-col gap-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Legal name" name="name" defaultValue={vendor?.name} required className="sm:col-span-2" />
-            <FormField label="Tax ID (GSTIN / VAT / EIN)" name="taxId" defaultValue={vendor?.taxId} mono />
-            <FormField label="Billing email" name="email" type="email" defaultValue={vendor?.email} />
-            <FormField label="Address" name="address" defaultValue={vendor?.address} className="sm:col-span-2" />
+            <FormField label="Legal name" name="name" defaultValue={values?.name} required className="sm:col-span-2" />
+            <FormField label="Tax ID (GSTIN / VAT / EIN)" name="taxId" defaultValue={values?.taxId} mono />
+            <FormField label="Billing email" name="email" type="email" defaultValue={values?.email} />
+            <FormField label="Address" name="address" defaultValue={values?.address} className="sm:col-span-2" />
           </div>
           <fieldset className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
             <legend className="text-muted-foreground px-1 text-xs font-medium">Registered bank account</legend>
-            <FormField label="Bank name" name="bankName" defaultValue={vendor?.bankName} />
-            <FormField label="Routing (IFSC / SWIFT)" name="bankRouting" defaultValue={vendor?.bankRouting} mono />
+            <FormField label="Bank name" name="bankName" defaultValue={values?.bankName} />
+            <FormField label="Routing (IFSC / SWIFT)" name="bankRouting" defaultValue={values?.bankRouting} mono />
             <FormField
               label="Account number / IBAN"
               name="bankAccount"
-              defaultValue={vendor?.bankAccount}
+              defaultValue={values?.bankAccount}
               mono
               className="sm:col-span-2"
             />

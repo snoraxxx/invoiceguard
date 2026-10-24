@@ -123,7 +123,7 @@ export async function analyzeInvoice(invoiceId: string, emit: Emit) {
       total: extraction.total,
       lineItems,
     };
-    const { checks, vendor, purchaseOrder, ruleScore } = await runChecks(facts);
+    const { checks, vendor, purchaseOrder, receiptMatch, ruleScore } = await runChecks(facts);
     for (const check of checks) emit({ type: "check", check });
     const failed = checks.filter((c) => c.status === "fail").length;
     const warned = checks.filter((c) => c.status === "warn").length;
@@ -137,10 +137,13 @@ export async function analyzeInvoice(invoiceId: string, emit: Emit) {
     // 3. Agent investigation
     emit({ type: "stage", stage: "review", state: "running" });
     const steps: AgentStep[] = [];
-    const review = await reviewInvoice({ extraction, checks, vendorId: vendor?.id ?? null, ruleScore }, (step) => {
-      steps.push(step);
-      emit({ type: "tool", name: step.name, summary: describeTool(step) });
-    });
+    const review = await reviewInvoice(
+      { invoiceId, extraction, checks, vendorId: vendor?.id ?? null, receiptMatch, ruleScore },
+      (step) => {
+        steps.push(step);
+        emit({ type: "tool", name: step.name, summary: describeTool(step) });
+      },
+    );
     emit({ type: "stage", stage: "review", state: "done", detail: `Agent verdict: ${review.verdict}` });
 
     // 4. Decision
@@ -155,6 +158,7 @@ export async function analyzeInvoice(invoiceId: string, emit: Emit) {
         vendorId: vendor?.id ?? null,
         purchaseOrderId: purchaseOrder?.id ?? null,
         checks,
+        receiptMatch,
         findings: toFindings(review),
         agentSteps: steps,
         summary: review.summary,
@@ -193,6 +197,8 @@ function describeTool(step: AgentStep) {
       return "Compared against the vendor's invoice history";
     case "get_purchase_order":
       return `Looked up purchase order ${args.po_number}`;
+    case "get_goods_receipts":
+      return `Checked deliveries received from “${args.supplier_name}”`;
     default:
       return step.name;
   }

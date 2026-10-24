@@ -1,3 +1,4 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { AnalysisEvent } from "@/lib/types";
 
 type Emit = (event: AnalysisEvent) => void;
@@ -20,16 +21,20 @@ export function ndjsonResponse(run: (emit: Emit) => Promise<void>) {
           open = false;
         }
       };
-      try {
-        await run(emit);
-      } catch (error) {
-        emit({ type: "error", message: error instanceof Error ? error.message : "Unexpected error" });
-      } finally {
-        if (open) {
-          open = false;
-          controller.close();
+      const work = (async () => {
+        try {
+          await run(emit);
+        } catch (error) {
+          emit({ type: "error", message: error instanceof Error ? error.message : "Unexpected error" });
+        } finally {
+          if (open) {
+            open = false;
+            controller.close();
+          }
         }
-      }
+      })();
+      keepAlive(work);
+      await work;
     },
     cancel() {
       open = false;
@@ -43,4 +48,13 @@ export function ndjsonResponse(run: (emit: Emit) => Promise<void>) {
       "X-Accel-Buffering": "no",
     },
   });
+}
+
+/** On Cloudflare Workers, keep the request alive until the work settles even if the client goes away. */
+function keepAlive(promise: Promise<unknown>) {
+  try {
+    getCloudflareContext().ctx.waitUntil(promise);
+  } catch {
+    // Not running on Workers — Node keeps the promise alive on its own.
+  }
 }
